@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -13,10 +14,13 @@ export const metadata: Metadata = {
   openGraph: { title: "Perfin — Central de análise econômica", locale: "pt_BR", type: "website" },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
