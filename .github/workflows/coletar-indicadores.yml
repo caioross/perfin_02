@@ -1,0 +1,38 @@
+name: Coletar indicadores (BCB/SGS)
+
+on:
+  schedule:
+    # Dias úteis às 22:00 UTC (19:00 em Brasília), após a PTAX e a taxa DI do dia.
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coletar-indicadores
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Aplicativo/coletor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: Aplicativo/coletor/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Coletar e gravar no Supabase
+        env:
+          COLETOR_DATABASE_URL: ${{ secrets.COLETOR_DATABASE_URL }}
+        run: python coletor_indicadores.py

@@ -1,0 +1,59 @@
+# ============================================================
+# IMPORTANTE: a pasta .claude/ DEVE ser versionada no GitHub.
+# Ela contém CLAUDE.md, agents, skills, rules, hooks e settings
+# compartilhados pelo time. NÃO adicione .claude/ a este arquivo.
+# Apenas configurações pessoais/locais do Claude são ignoradas:
+# ============================================================
+.claude/settings.local.json
+.claude/**/*.local.*
+
+# Variáveis de ambiente e segredos (nunca versionar)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Dependências
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pnpm-store/
+
+# Builds e caches
+dist/
+build/
+out/
+.next/
+.turbo/
+.vercel/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp

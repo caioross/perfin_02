@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --fundo: #f6f7f9;
+  --superficie: #ffffff;
+  --superficie-2: #eef1f4;
+  --borda: #dde2e8;
+  --texto: #14202b;
+  --texto-suave: #5b6876;
+  --marca: #0f6e66;
+  --marca-forte: #0b524c;
+  --marca-suave: #d9efec;
+  --alerta: #b42318;
+  --alerta-suave: #fde8e6;
+  --atencao: #a15c07;
+  --atencao-suave: #fdf1dc;
+  --info: #1d5fa8;
+  --info-suave: #e3eefa;
+  --positivo: #157f3c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0e141a;
+    --superficie: #151d25;
+    --superficie-2: #1d2731;
+    --borda: #2b3743;
+    --texto: #e7edf2;
+    --texto-suave: #9aa8b5;
+    --marca: #3fb7a9;
+    --marca-forte: #6fd0c4;
+    --marca-suave: #173a37;
+    --alerta: #f2867c;
+    --alerta-suave: #3b1d1b;
+    --atencao: #f0b45a;
+    --atencao-suave: #3a2c14;
+    --info: #79aef0;
+    --info-suave: #182c44;
+    --positivo: #5fcf8a;
+  }
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borda: var(--borda);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-marca: var(--marca);
+  --color-marca-forte: var(--marca-forte);
+  --color-marca-suave: var(--marca-suave);
+  --color-alerta: var(--alerta);
+  --color-alerta-suave: var(--alerta-suave);
+  --color-atencao: var(--atencao);
+  --color-atencao-suave: var(--atencao-suave);
+  --color-info: var(--info);
+  --color-info-suave: var(--info-suave);
+  --color-positivo: var(--positivo);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+.numero {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Área segura de aparelhos com notch quando instalado como app. */
+.area-segura-inferior {
+  padding-bottom: env(safe-area-inset-bottom);
+}
