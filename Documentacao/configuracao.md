@@ -122,8 +122,7 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos. O passo a passo ilus
 2. **Authentication → URL Configuration:**
    - **Site URL:** `https://perfin-portal.vercel.app`
    - **Redirect URLs:**
-     - `https://perfin-portal.vercel.app/auth/callback` (Google);
-     - `https://perfin-portal.vercel.app/auth/confirmar` (links de e-mail);
+     - `https://perfin-portal.vercel.app/**` (cobre `/auth/callback` do Google e `/auth/confirmar` dos e-mails);
      - `https://*-caioross-projects.vercel.app/**` (previews).
 
 ## 6. Verificação final (na URL da Vercel)

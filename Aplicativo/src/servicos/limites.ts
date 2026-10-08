@@ -3,17 +3,14 @@ import { registrarErro } from "@/lib/erros";
 import { chamarRpcUnica } from "@/servicos/supabase/rpc";
 import { criarClienteServidor } from "@/servicos/supabase/servidor";
 
-// Consome uma unidade da cota do usuário logado (função consumir_limite, no banco, válida para
-// todas as instâncias serverless). Falha fechada: erro ao consultar = sem cota.
-export async function consumirLimite(chave: string, maximo: number, janelaSegundos: number): Promise<boolean> {
+export type ChaveLimite = "assistente";
+
+// Consome uma unidade da cota do usuário logado. A cota de cada chave é fixa no banco
+// (função cota_limite) e vale para todas as instâncias serverless. Falha fechada: erro = sem cota.
+export async function consumirLimite(chave: ChaveLimite): Promise<boolean> {
   try {
     const supabase = await criarClienteServidor();
-    const permitido = await chamarRpcUnica<boolean>(supabase, "consumir_limite", {
-      p_chave: chave,
-      p_maximo: maximo,
-      p_janela_segundos: janelaSegundos,
-    });
-    return permitido === true;
+    return (await chamarRpcUnica<boolean>(supabase, "consumir_limite", { p_chave: chave })) === true;
   } catch (erro) {
     registrarErro(`limite ${chave}`, erro);
     return false;

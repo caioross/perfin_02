@@ -9,18 +9,18 @@ import CabecalhoPagina from "@/componentes/painel/CabecalhoPagina";
 import { exigirAcesso } from "@/lib/auth/sessao";
 import { ErroReconexaoGoogle, registrarErro } from "@/lib/erros";
 import { listarProximosEventos } from "@/servicos/google/agenda";
-import { obterAccessToken, semContaGoogle } from "@/servicos/google/tokens";
+import { usaRecursosGoogle } from "@/dominio/auth/recursos";
+import { obterAccessToken } from "@/servicos/google/tokens";
 import type { EventoAgenda } from "@/tipos/google";
 
 export const metadata: Metadata = { title: "Agenda" };
 
 async function ConteudoAgenda() {
   const usuario = await exigirAcesso(["usuario"]);
-  let eventos: EventoAgenda[] | null;
+  if (!usaRecursosGoogle(usuario.provedor)) return <AvisoSoGoogle recurso="A Agenda" />;
+  let eventos: EventoAgenda[];
   try {
-    eventos = (await semContaGoogle(usuario))
-      ? null
-      : await listarProximosEventos(await obterAccessToken(usuario.id), new Date());
+    eventos = await listarProximosEventos(await obterAccessToken(usuario.id), new Date());
   } catch (erro) {
     registrarErro("agenda", erro);
     if (erro instanceof ErroReconexaoGoogle) {
@@ -32,7 +32,6 @@ async function ConteudoAgenda() {
     }
     return <EstadoErro />;
   }
-  if (!eventos) return <AvisoSoGoogle recurso="A Agenda" />;
   return <ListaEventos eventos={eventos} />;
 }
 

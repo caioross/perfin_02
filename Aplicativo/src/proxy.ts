@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // Proxy (antigo middleware): renova os cookies da sessão do Supabase e faz a checagem
 // otimista de login. A autorização real (papel, MFA) é feita no servidor de cada página/ação.
 
-const ROTAS_PUBLICAS = ["/login", "/cadastro", "/esqueci-senha", "/auth", "/nao-autorizado", "/offline"];
+const ROTAS_PUBLICAS = ["/login", "/cadastro", "/esqueci-senha", "/redefinir-senha", "/auth", "/nao-autorizado", "/offline"];
 
 function rotaPublica(caminho: string): boolean {
   return ROTAS_PUBLICAS.some((rota) => caminho === rota || caminho.startsWith(`${rota}/`));

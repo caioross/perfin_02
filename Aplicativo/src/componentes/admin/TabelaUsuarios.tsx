@@ -1,4 +1,5 @@
 import { alternarBloqueioAcao } from "@/app/(portal)/admin/acoes";
+import { podeAlternarBloqueio, rotuloProvedor } from "@/dominio/admin/usuarios";
 import { formatarDataHora } from "@/lib/formatacao";
 import type { Papel, PerfilAdmin } from "@/tipos/auth";
 
@@ -27,14 +28,14 @@ export default function TabelaUsuarios({ perfis }: Props) {
         </thead>
         <tbody>
           {perfis.map((p) => {
-            const gerenciavel = (p.provedor === "google" || p.provedor === "email") && (p.papel === "usuario" || p.papel === "bloqueado");
+            const gerenciavel = podeAlternarBloqueio(p);
             return (
               <tr key={p.user_id} className="border-t border-borda">
                 <th scope="row" className="px-3 py-2 text-left font-normal">
                   <span className="block font-medium">{p.nome ?? "—"}</span>
                   <span className="text-texto-suave">{p.email}</span>
                 </th>
-                <td className="px-3 py-2">{p.provedor === "google" ? "Google" : "E-mail e senha"}</td>
+                <td className="px-3 py-2">{rotuloProvedor(p.provedor)}</td>
                 <td className="px-3 py-2">{PAPEIS[p.papel]}</td>
                 <td className="numero px-3 py-2">{formatarDataHora(p.ultimo_acesso)}</td>
                 <td className="px-3 py-2 text-right">

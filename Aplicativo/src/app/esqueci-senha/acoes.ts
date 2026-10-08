@@ -1,5 +1,6 @@
 "use server";
 
+import { MUITAS_TENTATIVAS } from "@/dominio/auth/mensagens";
 import { esquemaEmail } from "@/dominio/auth/validacao";
 import { registrarErro } from "@/lib/erros";
 import { permitirRequisicao } from "@/lib/limiteRequisicoes";
@@ -13,11 +14,11 @@ export async function pedirRecuperacao(_estado: EstadoRecuperacao, formulario: F
   const email = esquemaEmail.safeParse(formulario.get("email"));
   if (!email.success) return { erro: "Informe um e-mail válido.", enviado: false };
   if (!permitirRequisicao(`recuperacao:${email.data}`, 3, 60 * 60 * 1000)) {
-    return { erro: "Muitas tentativas. Aguarde alguns minutos e tente novamente.", enviado: false };
+    return { erro: MUITAS_TENTATIVAS, enviado: false };
   }
 
   const supabase = await criarClienteServidor();
-  const { error } = await supabase.auth.resetPasswordForEmail(email.data, { redirectTo: urlDoSite("/auth/confirmar") });
+  const { error } = await supabase.auth.resetPasswordForEmail(email.data, { redirectTo: urlDoSite("/auth/confirmar?type=recovery") });
   if (error) registrarErro("recuperar senha", error);
   return { erro: null, enviado: true };
 }

@@ -8,9 +8,9 @@ import CabecalhoPagina from "@/componentes/painel/CabecalhoPagina";
 import FormGerarRelatorio from "@/componentes/relatorios/FormGerarRelatorio";
 import ListaRelatorios from "@/componentes/relatorios/ListaRelatorios";
 import MensagemAcao from "@/componentes/relatorios/MensagemAcao";
+import { usaRecursosGoogle } from "@/dominio/auth/recursos";
 import { exigirAcesso } from "@/lib/auth/sessao";
 import { registrarErro } from "@/lib/erros";
-import { semContaGoogle } from "@/servicos/google/tokens";
 import { listarMesesDisponiveis, listarRelatorios } from "@/servicos/relatorios";
 import type { Relatorio } from "@/tipos/google";
 
@@ -21,15 +21,17 @@ const AVISO_RECONEXAO = { erro: "Sua conexão com o Google expirou. Entre novame
 async function ConteudoRelatorios({ searchParams }: { searchParams: PageProps<"/relatorios">["searchParams"] }) {
   const usuario = await exigirAcesso(["usuario"]);
   const pedirReconexao = (await searchParams).reconectar === "1";
-  let dados: [string[], Relatorio[]] | null;
+  if (!usaRecursosGoogle(usuario.provedor)) {
+    return <AvisoSoGoogle recurso="O relatório do mês (Planilha no Drive e rascunho no Gmail)" />;
+  }
+  let meses: string[];
+  let relatorios: Relatorio[];
   try {
-    dados = (await semContaGoogle(usuario)) ? null : await Promise.all([listarMesesDisponiveis(), listarRelatorios()]);
+    [meses, relatorios] = await Promise.all([listarMesesDisponiveis(), listarRelatorios()]);
   } catch (erro) {
     registrarErro("relatórios", erro);
     return <EstadoErro />;
   }
-  if (!dados) return <AvisoSoGoogle recurso="O relatório do mês (Planilha no Drive e rascunho no Gmail)" />;
-  const [meses, relatorios] = dados;
   return (
     <>
       {pedirReconexao && <MensagemAcao estado={AVISO_RECONEXAO} />}

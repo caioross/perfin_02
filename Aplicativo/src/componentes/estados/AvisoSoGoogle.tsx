@@ -7,7 +7,7 @@ export default function AvisoSoGoogle({ recurso }: Props) {
   return (
     <EstadoVazio
       titulo="Disponível para quem entra com Google"
-      descricao={`${recurso} usa a sua conta Google. Para usar, entre no Portal com o Google usando este mesmo e-mail.`}
+      descricao={`${recurso} usa a conta Google e está disponível para quem se cadastrou no Portal com o Google.`}
     />
   );
 }

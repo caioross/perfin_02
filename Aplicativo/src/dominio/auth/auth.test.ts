@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rotaAposLogin, tipoLinkEmail } from "./rotas";
+import { autenticouPorRecuperacao, rotaAposLogin, tipoLinkEmail } from "./rotas";
 import { esquemaCadastro, esquemaLogin, esquemaRedefinicao, lerCampos, primeiraMensagem } from "./validacao";
 
 const CADASTRO_VALIDO = { nome: "Ana Lima", email: " Ana@Exemplo.com ", senha: "segura123", confirmacao: "segura123" };
@@ -68,5 +68,21 @@ describe("tipoLinkEmail", () => {
     expect(tipoLinkEmail("email")).toBe("email");
     expect(tipoLinkEmail("magiclink")).toBeNull();
     expect(tipoLinkEmail(null)).toBeNull();
+  });
+});
+
+describe("autenticouPorRecuperacao", () => {
+  it("só aceita sessão com método recovery", () => {
+    expect(autenticouPorRecuperacao([{ method: "recovery", timestamp: 1 }])).toBe(true);
+    expect(autenticouPorRecuperacao([{ method: "password", timestamp: 1 }])).toBe(false);
+    expect(autenticouPorRecuperacao(undefined)).toBe(false);
+    expect(autenticouPorRecuperacao(["recovery"])).toBe(false);
+  });
+});
+
+describe("senha em bytes", () => {
+  it("recusa senha acentuada acima de 72 bytes", () => {
+    const senha = "ç".repeat(40) + "1";
+    expect(esquemaRedefinicao.safeParse({ senha, confirmacao: senha }).success).toBe(false);
   });
 });

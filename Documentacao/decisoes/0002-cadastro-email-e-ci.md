@@ -16,14 +16,16 @@ O site institucional precisava de um botão **"Entrar / Cadastrar"** que permiti
    - O botão do site leva para `/login` (ou `/cadastro`) do Portal: um único lugar trata senha, MFA e sessão.
 3. **Links de e-mail com `token_hash`.**
    - Confirmação e recuperação usam `/auth/confirmar?token_hash=…&type=…` (`verifyOtp`), que funciona em qualquer aparelho.
+   - A página mostra o botão "Continuar", e o `verifyOtp` só roda no POST: leitores de link dos e-mails (ex.: Safe Links) não gastam o token.
    - O fluxo PKCE (`?code=`) fica só como alternativa, porque exige o mesmo navegador do cadastro.
    - Os templates de e-mail do Supabase precisam apontar para essa rota.
-4. **Recursos Google para quem entrou por e-mail.**
-   - Agenda e relatório mostram "Disponível para quem entra com Google".
-   - Não há vinculação manual de contas. A vinculação automática do Supabase (mesmo e-mail verificado) cobre quem depois entrar com o Google.
+4. **Recursos Google só para contas criadas pelo Google.**
+   - Agenda e relatório mostram "Disponível para quem entra com Google" para contas de e-mail.
+   - O callback do Google **não guarda token** em conta de e-mail, mesmo com a vinculação automática do Supabase.
+   - Motivo: evita a tomada de conta por pré-cadastro, em que o atacante cadastra o e-mail da vítima, a vítima confirma e depois entra com o Google.
 5. **Limite do assistente no banco.**
    - Com cadastro aberto, o limite em memória por instância não protege o custo do Gemini.
-   - A função `consumir_limite` (security definer, sempre `auth.uid()`) e a tabela `limites_uso` (RLS sem políticas) valem para todas as instâncias.
+   - A função `consumir_limite(chave)` (security definer, sempre `auth.uid()`, cota fixa em `cota_limite`) e a tabela `limites_uso` (RLS sem políticas) valem para todas as instâncias.
    - O login continua com limite em memória, somado aos limites do Supabase Auth.
 6. **CI no GitHub Actions** (`.github/workflows/ci.yml`). Jobs `portal`, `site`, `python`, `banco` e `segredos`, exigidos na proteção da `main`.
    - O job `banco` sobe o Postgres do Supabase com o CLI (`supabase db start`) e aplica as migrations antes de rodar `testar_banco.py`. Assim, toda migration é testada antes de chegar à produção.

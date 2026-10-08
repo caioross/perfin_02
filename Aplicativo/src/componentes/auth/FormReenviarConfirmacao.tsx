@@ -16,7 +16,7 @@ export default function FormReenviarConfirmacao({ email }: Props) {
       <button type="submit" disabled={enviando} className="font-medium text-marca underline-offset-2 hover:underline disabled:opacity-60">
         {enviando ? "Reenviando…" : "Reenviar link de confirmação"}
       </button>
-      {estado.mensagem && <p aria-live="polite" className="text-texto-suave">{estado.mensagem}</p>}
+      <p aria-live="polite" className="text-texto-suave">{estado.mensagem}</p>
     </form>
   );
 }

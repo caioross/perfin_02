@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { MUITAS_TENTATIVAS, SENHA_FRACA } from "@/dominio/auth/mensagens";
 import { esquemaCadastro, esquemaEmail, lerCampos, primeiraMensagem } from "@/dominio/auth/validacao";
+import { destinoAposLogin } from "@/lib/auth/destino";
 import { MENSAGEM_ERRO_GENERICA, registrarErro } from "@/lib/erros";
 import { permitirRequisicao } from "@/lib/limiteRequisicoes";
 import { urlDoSite } from "@/lib/url";
@@ -12,7 +14,6 @@ export type EstadoCadastro = { erro: string | null; emailEnviado: string | null;
 export type EstadoReenvio = { mensagem: string | null };
 
 const HORA_MS = 60 * 60 * 1000;
-const MUITAS_TENTATIVAS = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 
 // Cadastro por e-mail e senha. A conta nasce "usuario" (gatilho do banco), mas só entra depois de
 // confirmar o e-mail. E-mail já cadastrado recebe a mesma resposta, para não revelar contas.
@@ -30,13 +31,13 @@ export async function cadastrar(_estado: EstadoCadastro, formulario: FormData): 
     password: senha,
     options: { emailRedirectTo: urlDoSite("/auth/confirmar"), data: { full_name: nome } },
   });
-  if (error?.code === "weak_password") return falha("Senha fraca ou muito comum. Escolha outra.");
+  if (error?.code === "weak_password") return falha(SENHA_FRACA);
   if (error && error.code !== "user_already_exists") {
     registrarErro("cadastro", error);
     return falha(MENSAGEM_ERRO_GENERICA);
   }
   // Sem confirmação de e-mail no Supabase, a sessão já vem pronta.
-  if (data.session) redirect("/visao-geral");
+  if (data.session && data.user) redirect(await destinoAposLogin(supabase, data.user.id));
   return { erro: null, emailEnviado: email, nome, email };
 }
 

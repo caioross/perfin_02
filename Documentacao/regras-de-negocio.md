@@ -22,6 +22,8 @@ Fonte única das regras do produto. Os números são calculados no banco (funç�
 - **Confirmação de e-mail.** O Supabase só emite sessão depois da confirmação. Mesmo assim, o Portal nega acesso a sessões com e-mail não confirmado.
 - **Onde se entra.** O site institucional leva ao Portal pelo botão **"Entrar / Cadastrar"**. Login, cadastro e recuperação de senha acontecem só no domínio do Portal, porque site e Portal não compartilham sessão.
   - **Rotas:** `/login`, `/cadastro`, `/esqueci-senha`, `/redefinir-senha` e `/auth/confirmar` (links do e-mail).
+  - `/auth/confirmar` mostra o botão "Continuar", e o token só é usado no clique (POST). Leitores de link dos provedores de e-mail não gastam o link.
+  - `/redefinir-senha` só aceita a sessão aberta pelo link de recuperação (`amr = recovery`). A senha do admin é redefinida pelo painel do Supabase.
   - Google volta por `/auth/callback`.
 - **Senha:**
   - **cadastro e redefinição:** 8 a 72 caracteres, com letras e números (validação no servidor);
@@ -39,16 +41,21 @@ Fonte única das regras do produto. Os números são calculados no banco (funç�
   | Reenvio de confirmação | 3 por hora |
   | Recuperação de senha | 3 por hora |
 
-- **Recursos Google para quem entrou por e-mail.**
-  - Sem conta Google conectada, Agenda e relatório mostram um aviso, não um erro.
-  - Se a pessoa entrar com o Google usando o mesmo e-mail (e estiver na lista de teste), o Supabase vincula as identidades e os recursos são liberados.
+- **Recursos Google só para contas criadas pelo Google.**
+  - Contas de e-mail veem em Agenda e relatório o aviso "Disponível para quem entra com Google", não um erro.
+  - O token Google **nunca** é guardado numa conta de e-mail, mesmo que o Supabase vincule um login Google a ela depois.
+  - Motivo: impede que alguém pré-cadastre o e-mail de outra pessoa e passe a usar o Google dela.
 - **Bloqueio.**
   - O admin bloqueia e desbloqueia usuários Google e de e-mail.
   - O RLS impede alterar outro admin, promover alguém a admin e liberar um cadastro `sem_acesso`.
 - **Checagem de acesso.** Toda página, Server Action e rota de API checa o papel no servidor, e o RLS do banco checa de novo.
 - **MFA no banco.** Os poderes de admin exigem sessão **aal2** (senha + TOTP) também no banco (`eh_admin()`). Um token só com senha não age como admin nem pela API REST.
 - **Admin e conta Google.** O admin não deve usar o mesmo e-mail em login Google. O callback do Google recusa quem não for `usuario`.
-- **Cadastro aberto e custo.** O limite do assistente (§6) é contado no banco (`consumir_limite`, tabela `limites_uso`), valendo para todas as instâncias do servidor. Se houver abuso: CAPTCHA no Supabase Auth e bloqueio pelo admin.
+- **Cadastro aberto e custo.**
+  - O limite do assistente (§6) é contado no banco (`consumir_limite`, tabela `limites_uso`) e vale para todas as instâncias do servidor.
+  - A cota é fixa no banco (`cota_limite`); quem chama não escolhe o máximo nem a janela.
+  - Se houver abuso: CAPTCHA no Supabase Auth e bloqueio pelo admin.
+- **Admin pré-existente.** O `criar_admin.py` só promove uma conta já existente se o e-mail estiver confirmado e a senha conferir com `ADMIN_PASSWORD`.
 
 ## 2. Telas do Portal
 

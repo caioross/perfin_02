@@ -46,7 +46,7 @@
   <tr><th>Tema</th><th>Decisão</th></tr>
   <tr><td>Cadastro por e-mail</td><td><strong>Acesso imediato</strong> depois de confirmar o e-mail (papel <code>usuario</code>).</td></tr>
   <tr><td>Onde fica o formulário</td><td>No <strong>Portal</strong>. Site e Portal estão em endereços diferentes na Vercel e não compartilham login, então há um único lugar de login.</td></tr>
-  <tr><td>Agenda, Relatório e Gmail para quem entrou por e-mail</td><td>Aviso “Disponível para quem entra com Google”. Se a pessoa depois entrar com o Google do mesmo e-mail, as contas são vinculadas e os recursos são liberados.</td></tr>
+  <tr><td>Agenda, Relatório e Gmail para quem entrou por e-mail</td><td>Aviso “Disponível para quem entra com Google”. Por segurança, esses recursos ficam só com contas criadas pelo Google.</td></tr>
 </table>
 
 <h3>A URL que você procura (Google Cloud)</h3>
@@ -127,7 +127,7 @@
 <h3>A4. Criar o admin <span class="tag voce">antes de abrir o cadastro</span></h3>
 <ul class="check">
   <li>Confirme que <code>ADMIN_PASSWORD</code> no <code>.env</code> tem 12 caracteres ou mais e que <code>SUPABASE_POOLER_HOST=aws-0-sa-east-1.pooler.supabase.com</code> está lá</li>
-  <li>Rode <code>python Aplicativo/supabase/scripts/criar_admin.py</code>. Assim ninguém registra o e-mail do admin antes de você.</li>
+  <li>Rode <code>python Aplicativo/supabase/scripts/criar_admin.py</code>. Assim ninguém registra o e-mail do admin antes de você. Se a conta já existir, o script só a promove se a senha conferir com <code>ADMIN_PASSWORD</code>.</li>
 </ul>
 </div>
 
@@ -139,7 +139,7 @@
   <li><strong>URL Configuration:</strong>
     <table>
       <tr><td>Site URL</td><td><code>https://perfin-portal.vercel.app</code></td></tr>
-      <tr><td>Redirect URLs</td><td><code>https://perfin-portal.vercel.app/auth/callback</code><br><code>https://perfin-portal.vercel.app/auth/confirmar</code><br><code>https://*-caioross-projects.vercel.app/**</code></td></tr>
+      <tr><td>Redirect URLs</td><td><code>https://perfin-portal.vercel.app/**</code><br><code>https://*-caioross-projects.vercel.app/**</code></td></tr>
     </table>
   </li>
   <li><strong>Multi-Factor:</strong> TOTP habilitado (usado pelo admin)</li>
@@ -202,7 +202,7 @@
 <h3>A9. Teste final (na URL pública)</h3>
 <ul class="check">
   <li>Site: o botão “Entrar / Cadastrar” no canto superior direito abre o <code>/login</code> do Portal</li>
-  <li>Criar conta com e-mail → o e-mail chega → o link confirma → abre a Visão geral</li>
+  <li>Criar conta com e-mail → o e-mail chega → o link abre “Confirmar acesso” → <em>Continuar</em> → abre a Visão geral</li>
   <li>Sair e entrar com e-mail e senha</li>
   <li>“Esqueci minha senha” → o e-mail chega → criar nova senha → entrar</li>
   <li>“Continuar com Google” (usuário de teste) → Visão geral; a Agenda lista eventos</li>
@@ -227,7 +227,7 @@
 <ul>
   <li>Cadastro por e-mail passa a nascer como <code>usuario</code>. O acesso só começa depois da confirmação do e-mail.</li>
   <li>O admin pode bloquear e desbloquear usuários de e-mail, além dos de Google, mas nunca outro admin.</li>
-  <li>Nova tabela <code>limites_uso</code> e função <code>consumir_limite</code>: o limite de perguntas ao assistente passa a valer no banco, protegendo o custo do Gemini com o cadastro aberto.</li>
+  <li>Nova tabela <code>limites_uso</code> e função <code>consumir_limite</code>: o limite de perguntas ao assistente (20 a cada 10 minutos, fixo no banco) passa a valer no banco, protegendo o custo do Gemini com o cadastro aberto.</li>
   <li>RLS continua ligado em todas as tabelas.</li>
 </ul>
 
@@ -238,7 +238,7 @@
   <tr><td><code>/cadastro</code></td><td>“Cadastrar com Google” · nome, e-mail, senha e confirmação → tela “Confirme seu e-mail” (com reenviar)</td></tr>
   <tr><td><code>/esqueci-senha</code></td><td>Pede o e-mail; a resposta é sempre a mesma, para não revelar contas</td></tr>
   <tr><td><code>/redefinir-senha</code></td><td>Nova senha + confirmação (aberta pelo link do e-mail)</td></tr>
-  <tr><td><code>/auth/confirmar</code></td><td>Valida o link do e-mail (cadastro ou recuperação) e leva ao lugar certo</td></tr>
+  <tr><td><code>/auth/confirmar</code></td><td>Página do link do e-mail com o botão “Continuar”. O token só é usado no clique, para que leitores de link do provedor de e-mail não o gastem antes da pessoa.</td></tr>
 </table>
 
 <h2>Apêndice</h2>
@@ -248,7 +248,7 @@
   <tr><td>Google → redirect</td><td><code>https://tphqjblaspvyflzjinkq.supabase.co/auth/v1/callback</code></td></tr>
   <tr><td>Google → origens</td><td><code>https://perfin-portal.vercel.app</code>, <code>https://perfin-site.vercel.app</code></td></tr>
   <tr><td>Supabase → Site URL</td><td><code>https://perfin-portal.vercel.app</code></td></tr>
-  <tr><td>Supabase → Redirect URLs</td><td><code>/auth/callback</code>, <code>/auth/confirmar</code> (no Portal) e <code>https://*-caioross-projects.vercel.app/**</code></td></tr>
+  <tr><td>Supabase → Redirect URLs</td><td><code>https://perfin-portal.vercel.app/**</code> e <code>https://*-caioross-projects.vercel.app/**</code></td></tr>
   <tr><td>Vercel Site → <code>NEXT_PUBLIC_PORTAL_URL</code></td><td><code>https://perfin-portal.vercel.app</code></td></tr>
 </table>
 

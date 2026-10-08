@@ -11,7 +11,9 @@ export const esquemaSenhaNova = z
   .min(SENHA_MINIMO, `A senha precisa ter pelo menos ${SENHA_MINIMO} caracteres.`)
   .max(SENHA_MAXIMO, `A senha pode ter no máximo ${SENHA_MAXIMO} caracteres.`)
   .regex(/\p{L}/u, "A senha precisa ter pelo menos uma letra.")
-  .regex(/\d/, "A senha precisa ter pelo menos um número.");
+  .regex(/\d/, "A senha precisa ter pelo menos um número.")
+  // O bcrypt do Supabase conta bytes: letras acentuadas ocupam 2.
+  .refine((senha) => new TextEncoder().encode(senha).length <= SENHA_MAXIMO, "Senha longa demais. Use menos caracteres acentuados.");
 
 const esquemaNome = z.string().trim().min(2, "Informe seu nome.").max(120, "Nome muito longo.");
 

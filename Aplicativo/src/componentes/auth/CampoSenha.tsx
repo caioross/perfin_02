@@ -21,6 +21,7 @@ export default function CampoSenha({ rotulo, name, prefixo, dica, ...atributos }
           aria-describedby={dica ? `${id}-dica` : undefined}
           className="min-w-0 flex-1 rounded-l-lg bg-transparent px-3 py-2 outline-none" {...atributos} />
         <button type="button" onClick={() => setVisivel((v) => !v)} aria-pressed={visivel}
+          aria-label={`${visivel ? "Ocultar" : "Mostrar"} ${rotulo.toLowerCase()}`}
           className="rounded-r-lg px-3 text-xs text-texto-suave hover:text-texto">
           {visivel ? "Ocultar" : "Mostrar"}
         </button>

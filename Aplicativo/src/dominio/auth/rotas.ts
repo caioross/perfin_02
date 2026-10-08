@@ -16,3 +16,8 @@ export type TipoLinkEmail = (typeof TIPOS_LINK_EMAIL)[number];
 export function tipoLinkEmail(valor: string | null): TipoLinkEmail | null {
   return TIPOS_LINK_EMAIL.find((t) => t === valor) ?? null;
 }
+
+// A sessão veio do link de recuperação de senha? (claim "amr" do JWT do Supabase)
+export function autenticouPorRecuperacao(amr: unknown): boolean {
+  return Array.isArray(amr) && amr.some((item) => typeof item === "object" && item !== null && "method" in item && item.method === "recovery");
+}

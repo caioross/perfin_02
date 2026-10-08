@@ -4,15 +4,13 @@ import { Suspense } from "react";
 import CartaoAutenticacao from "@/componentes/auth/CartaoAutenticacao";
 import FormRedefinirSenha from "@/componentes/auth/FormRedefinirSenha";
 import Carregando from "@/componentes/estados/Carregando";
-import { criarClienteServidor } from "@/servicos/supabase/servidor";
+import { obterSessaoDeRecuperacao } from "@/lib/auth/recuperacao";
 
 export const metadata: Metadata = { title: "Nova senha" };
 
-// Aberta pelo link de recuperação: /auth/confirmar já criou a sessão.
+// Aberta pelo link de recuperação (a confirmação em /auth/confirmar cria a sessão "recovery").
 async function ConteudoRedefinir() {
-  const supabase = await criarClienteServidor();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login?erro=link");
+  if (!(await obterSessaoDeRecuperacao())) redirect("/login?erro=link");
   return <FormRedefinirSenha />;
 }
 

@@ -162,6 +162,15 @@ class TestAcesso(BaseBanco):
             self.assertGreater(self.valor("select count(*) from indicadores_valores"), 0)
             self.assert_negado("select * from google_tokens")
 
+    def test_sem_provedor_nasce_sem_acesso(self):
+        uid = str(uuid.uuid4())
+        self.conexao.execute(
+            """insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data)
+               values ('00000000-0000-0000-0000-000000000000', %s, 'authenticated', 'authenticated', %s, '{}', '{}')""",
+            (uid, f"sem-provedor-{uid[:8]}@exemplo.com"),
+        )
+        self.assertEqual(self.valor("select papel::text from perfis where user_id=%s", (uid,)), "sem_acesso")
+
     def test_outro_provedor_nasce_sem_acesso(self):
         self.garantir_valor_indicador()
         uid = self.criar_usuario("github")
@@ -238,34 +247,45 @@ class TestAcesso(BaseBanco):
             self.assert_negado("select * from coletas")
 
 
-
 class TestLimiteUso(BaseBanco):
-    def test_consome_cota_do_proprio_usuario(self):
+    def consumir(self, chave: str = "assistente") -> bool:
+        return self.valor("select consumir_limite(%s)", (chave,))
+
+    def test_cota_fixa_do_proprio_usuario(self):
         uid = self.criar_usuario("email")
         outro = self.criar_usuario("google")
         with self.como("authenticated", uid):
-            resultados = [self.valor("select consumir_limite('assistente', 2, 600)") for _ in range(3)]
+            resultados = [self.consumir() for _ in range(21)]
             self.assert_negado("select * from limites_uso")
-        self.assertEqual(resultados, [True, True, False])
+        self.assertEqual(resultados, [True] * 20 + [False])
         with self.como("authenticated", outro):
-            self.assertTrue(self.valor("select consumir_limite('assistente', 2, 600)"))
+            self.assertTrue(self.consumir())
+
+    def test_usuario_nao_altera_a_propria_cota(self):
+        uid = self.criar_usuario("email")
+        with self.como("authenticated", uid):
+            with self.assertRaises(psycopg.errors.UndefinedFunction):  # máximo e janela não são parâmetros
+                with self.conexao.transaction():
+                    self.conexao.execute("select consumir_limite('assistente', 1, 1)")
+            self.assert_negado("select * from cota_limite('assistente')")
+            self.assert_negado("update limites_uso set contagem = 0")
 
     def test_janela_vencida_reinicia_a_contagem(self):
         uid = self.criar_usuario("email")
         self.conexao.execute(
-            "insert into limites_uso values (%s, 'assistente', now() - interval '20 minutes', 99)", (uid,)
+            "insert into limites_uso values (%s, 'assistente', now() - interval '11 minutes', 99)", (uid,)
         )
         with self.como("authenticated", uid):
-            self.assertTrue(self.valor("select consumir_limite('assistente', 2, 600)"))
+            self.assertTrue(self.consumir())
 
-    def test_parametros_invalidos_e_anon(self):
+    def test_chave_desconhecida_e_anon(self):
         uid = self.criar_usuario("email")
         with self.como("authenticated", uid):
             with self.assertRaises(psycopg.errors.InvalidParameterValue):
                 with self.conexao.transaction():
-                    self.conexao.execute("select consumir_limite('Assistente!', 2, 600)")
+                    self.consumir("outra")
         with self.como("anon"):
-            self.assert_negado("select consumir_limite('assistente', 2, 600)")
+            self.assert_negado("select consumir_limite('assistente')")
 
 
 if __name__ == "__main__":
