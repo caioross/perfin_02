@@ -1,0 +1,12 @@
+# Configuração do Supabase CLI usada só no CI (job "banco" do .github/workflows/ci.yml)
+# para subir um Postgres local e aplicar as migrations. A produção é configurada no
+# Dashboard do Supabase (ver Documentacao/configuracao.md).
+project_id = "perfin"
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = false

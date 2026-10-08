@@ -68,6 +68,14 @@ class BaseBanco(unittest.TestCase):
 class TestCalculos(BaseBanco):
     """Valores oficiais: IBGE (IPCA/INPC), FGV (IGP-M), B3/BCB (CDI, Selic, PTAX)."""
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        # No CI o banco local não tem a carga do BCB: só os testes de acesso rodam.
+        if not cls.conexao.execute("select exists (select 1 from public.indicadores_valores)").fetchone()[0]:
+            cls.conexao.close()
+            raise unittest.SkipTest("sem carga de indicadores (rode o coletor para testar os cálculos)")
+
     def assert_proximo(self, obtido, esperado: str, tolerancia: str = "0.005"):
         self.assertIsNotNone(obtido)
         self.assertLessEqual(abs(Decimal(obtido) - Decimal(esperado)), Decimal(tolerancia), f"{obtido} != {esperado}")
@@ -145,7 +153,15 @@ class TestAcesso(BaseBanco):
         with self.como("authenticated", uid):
             self.assertEqual(self.valor("select count(*) from indicadores_valores"), 0)
 
+    def garantir_valor_indicador(self) -> None:
+        # Linha de teste (desfeita no rollback) para os testes de leitura não dependerem da carga do BCB.
+        self.conexao.execute(
+            """insert into indicadores_valores (indicador_codigo, data_referencia, valor)
+               values ('ipca', '2000-01-01', 0.1) on conflict do nothing"""
+        )
+
     def test_usuario_google_le_dados_mas_nao_tokens(self):
+        self.garantir_valor_indicador()
         uid = self.criar_usuario("google")
         self.assertEqual(self.valor("select papel::text from perfis where user_id=%s", (uid,)), "usuario")
         with self.como("authenticated", uid):
