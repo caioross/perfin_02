@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 const MENSAGENS: Record<string, string> = {
   google: "Não foi possível entrar com o Google. Tente novamente.",
   sessao: "Sua sessão expirou. Entre novamente.",
+  link: "O link é inválido ou expirou. Entre novamente ou peça um novo link.",
 };
 
 export default function MensagemErroLogin() {

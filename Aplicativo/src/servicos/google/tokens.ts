@@ -3,6 +3,7 @@ import { cifrar, decifrar } from "@/lib/cripto";
 import { variavelServidor } from "@/lib/env";
 import { ErroReconexaoGoogle } from "@/lib/erros";
 import { criarClienteAdmin } from "@/servicos/supabase/admin";
+import type { UsuarioAtual } from "@/tipos/auth";
 
 const URL_TOKEN = "https://oauth2.googleapis.com/token";
 
@@ -23,6 +24,19 @@ async function lerRefreshToken(userId: string): Promise<string | null> {
     .maybeSingle<{ refresh_token_cifrado: string }>();
   if (error) throw new Error(`Falha ao ler token Google: ${error.code ?? ""}`);
   return data ? decifrar(data.refresh_token_cifrado, variavelServidor("TOKEN_ENCRYPTION_KEY")) : null;
+}
+
+// Recursos Google (Agenda, Drive, Gmail) exigem conta Google conectada. Quem se cadastrou por
+// e-mail e nunca entrou com o Google não tem token: a tela mostra um aviso em vez de erro.
+// Quem é do Google e perdeu o token segue o fluxo de reconexão (ErroReconexaoGoogle).
+export async function semContaGoogle(usuario: Pick<UsuarioAtual, "id" | "provedor">): Promise<boolean> {
+  if (usuario.provedor === "google") return false;
+  const { count, error } = await criarClienteAdmin()
+    .from("google_tokens")
+    .select("user_id", { count: "exact", head: true })
+    .eq("user_id", usuario.id);
+  if (error) throw new Error(`Falha ao consultar token Google: ${error.code ?? ""}`);
+  return !count;
 }
 
 export async function removerRefreshToken(userId: string): Promise<void> {

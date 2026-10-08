@@ -1,16 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
+import { esquemaLogin, lerCampos } from "@/dominio/auth/validacao";
+import { destinoAposLogin } from "@/lib/auth/destino";
 import { ESCOPOS_GOOGLE } from "@/lib/auth/escoposGoogle";
 import { registrarErro } from "@/lib/erros";
 import { permitirRequisicao } from "@/lib/limiteRequisicoes";
 import { urlDoSite } from "@/lib/url";
 import { criarClienteServidor } from "@/servicos/supabase/servidor";
 
-export type EstadoLogin = { erro: string | null };
+export type EstadoLogin = { erro: string | null; emailNaoConfirmado: string | null; email: string };
 
-// Login Google (usuários). Pede acesso offline para obter o refresh token das APIs Google.
+// Login Google (entrar ou cadastrar). Pede acesso offline para obter o refresh token das APIs Google.
 export async function entrarComGoogle(): Promise<void> {
   const supabase = await criarClienteServidor();
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -28,35 +29,27 @@ export async function entrarComGoogle(): Promise<void> {
   redirect(data.url);
 }
 
-const esquemaAdmin = z.object({
-  email: z.string().trim().toLowerCase().email().max(200),
-  senha: z.string().min(1).max(200),
-});
-
 const MENSAGEM_CREDENCIAIS = "E-mail ou senha inválidos.";
 
-// Login do admin (e-mail e senha). Mensagem sempre genérica; o MFA é exigido em seguida.
-export async function entrarComoAdmin(_estado: EstadoLogin, formulario: FormData): Promise<EstadoLogin> {
-  const entrada = esquemaAdmin.safeParse({ email: formulario.get("email"), senha: formulario.get("senha") });
-  if (!entrada.success) return { erro: MENSAGEM_CREDENCIAIS };
-  if (!permitirRequisicao(`login:${entrada.data.email}`, 5, 15 * 60 * 1000)) {
-    return { erro: "Muitas tentativas. Aguarde alguns minutos e tente novamente." };
+// Login por e-mail e senha (usuários e admin). Mensagem sempre genérica; o admin segue para o MFA.
+// "E-mail não confirmado" só aparece com a senha certa, então não revela quais contas existem.
+export async function entrarComEmail(_estado: EstadoLogin, formulario: FormData): Promise<EstadoLogin> {
+  const campos = lerCampos(formulario, ["email", "senha"] as const);
+  const falha = (erro: string): EstadoLogin => ({ erro, emailNaoConfirmado: null, email: campos.email });
+  const entrada = esquemaLogin.safeParse(campos);
+  if (!entrada.success) return falha(MENSAGEM_CREDENCIAIS);
+  const { email, senha } = entrada.data;
+  if (!permitirRequisicao(`login:${email}`, 5, 15 * 60 * 1000)) {
+    return falha("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
   }
 
   const supabase = await criarClienteServidor();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: entrada.data.email,
-    password: entrada.data.senha,
-  });
-  if (error || !data.user) return { erro: MENSAGEM_CREDENCIAIS };
-
-  const { data: perfil } = await supabase.from("perfis").select("papel").eq("user_id", data.user.id).maybeSingle();
-  if (perfil?.papel !== "admin") {
-    await supabase.auth.signOut();
-    redirect("/nao-autorizado");
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+  if (error?.code === "email_not_confirmed") {
+    return { erro: "Confirme seu e-mail para entrar. O link foi enviado no cadastro.", emailNaoConfirmado: email, email };
   }
-  await supabase.rpc("registrar_acesso");
-  redirect("/login/mfa");
+  if (error || !data.user) return falha(MENSAGEM_CREDENCIAIS);
+  redirect(await destinoAposLogin(supabase, data.user.id));
 }
 
 export async function sair(): Promise<void> {

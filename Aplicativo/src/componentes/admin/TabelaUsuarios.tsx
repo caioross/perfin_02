@@ -27,7 +27,7 @@ export default function TabelaUsuarios({ perfis }: Props) {
         </thead>
         <tbody>
           {perfis.map((p) => {
-            const gerenciavel = p.provedor === "google" && (p.papel === "usuario" || p.papel === "bloqueado");
+            const gerenciavel = (p.provedor === "google" || p.provedor === "email") && (p.papel === "usuario" || p.papel === "bloqueado");
             return (
               <tr key={p.user_id} className="border-t border-borda">
                 <th scope="row" className="px-3 py-2 text-left font-normal">

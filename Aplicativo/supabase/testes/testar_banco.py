@@ -147,8 +147,24 @@ class TestAcesso(BaseBanco):
             self.assert_negado("select acumulado_mensal('ipca','2024-01-01','2024-12-01')")
             self.assertIsNotNone(self.valor("select termometro_publico()"))
 
-    def test_cadastro_por_email_nasce_sem_acesso(self):
+    def garantir_valor_indicador(self) -> None:
+        # Linha de teste (desfeita no rollback) para os testes de leitura não dependerem da carga do BCB.
+        self.conexao.execute(
+            """insert into indicadores_valores (indicador_codigo, data_referencia, valor)
+               values ('ipca', '2000-01-01', 0.1) on conflict do nothing"""
+        )
+
+    def test_cadastro_por_email_nasce_usuario(self):
+        self.garantir_valor_indicador()
         uid = self.criar_usuario("email")
+        self.assertEqual(self.valor("select papel::text from perfis where user_id=%s", (uid,)), "usuario")
+        with self.como("authenticated", uid):
+            self.assertGreater(self.valor("select count(*) from indicadores_valores"), 0)
+            self.assert_negado("select * from google_tokens")
+
+    def test_outro_provedor_nasce_sem_acesso(self):
+        self.garantir_valor_indicador()
+        uid = self.criar_usuario("github")
         self.assertEqual(self.valor("select papel::text from perfis where user_id=%s", (uid,)), "sem_acesso")
         with self.como("authenticated", uid):
             self.assertEqual(self.valor("select count(*) from indicadores_valores"), 0)
@@ -181,13 +197,18 @@ class TestAcesso(BaseBanco):
             alteradas = self.conexao.execute("update perfis set papel='admin' where user_id=%s", (uid,)).rowcount
         self.assertEqual(alteradas, 0)
 
-    def test_admin_bloqueia_google_mas_nao_promove(self):
+    def test_admin_bloqueia_google_e_email_mas_nao_promove(self):
         admin = self.criar_usuario("email", "admin")
         alvo = self.criar_usuario("google")
-        outro_email = self.criar_usuario("email")
+        alvo_email = self.criar_usuario("email")
+        outro_admin = self.criar_usuario("email", "admin")
+        sem_acesso = self.criar_usuario("github")
         with self.como("authenticated", admin, aal="aal2"):
             self.assertEqual(self.conexao.execute("update perfis set papel='bloqueado' where user_id=%s", (alvo,)).rowcount, 1)
-            self.assertEqual(self.conexao.execute("update perfis set papel='usuario' where user_id=%s", (outro_email,)).rowcount, 0)
+            self.assertEqual(self.conexao.execute("update perfis set papel='bloqueado' where user_id=%s", (alvo_email,)).rowcount, 1)
+            self.assertEqual(self.conexao.execute("update perfis set papel='usuario' where user_id=%s", (alvo_email,)).rowcount, 1)
+            self.assertEqual(self.conexao.execute("update perfis set papel='bloqueado' where user_id=%s", (outro_admin,)).rowcount, 0)
+            self.assertEqual(self.conexao.execute("update perfis set papel='usuario' where user_id=%s", (sem_acesso,)).rowcount, 0)
             with self.assertRaises(psycopg.errors.InsufficientPrivilege):
                 with self.conexao.transaction():
                     self.conexao.execute("update perfis set papel='admin' where user_id=%s", (alvo,))
@@ -215,6 +236,36 @@ class TestAcesso(BaseBanco):
             self.assert_negado("select * from google_tokens")
             self.assert_negado("select * from perfis")
             self.assert_negado("select * from coletas")
+
+
+
+class TestLimiteUso(BaseBanco):
+    def test_consome_cota_do_proprio_usuario(self):
+        uid = self.criar_usuario("email")
+        outro = self.criar_usuario("google")
+        with self.como("authenticated", uid):
+            resultados = [self.valor("select consumir_limite('assistente', 2, 600)") for _ in range(3)]
+            self.assert_negado("select * from limites_uso")
+        self.assertEqual(resultados, [True, True, False])
+        with self.como("authenticated", outro):
+            self.assertTrue(self.valor("select consumir_limite('assistente', 2, 600)"))
+
+    def test_janela_vencida_reinicia_a_contagem(self):
+        uid = self.criar_usuario("email")
+        self.conexao.execute(
+            "insert into limites_uso values (%s, 'assistente', now() - interval '20 minutes', 99)", (uid,)
+        )
+        with self.como("authenticated", uid):
+            self.assertTrue(self.valor("select consumir_limite('assistente', 2, 600)"))
+
+    def test_parametros_invalidos_e_anon(self):
+        uid = self.criar_usuario("email")
+        with self.como("authenticated", uid):
+            with self.assertRaises(psycopg.errors.InvalidParameterValue):
+                with self.conexao.transaction():
+                    self.conexao.execute("select consumir_limite('Assistente!', 2, 600)")
+        with self.como("anon"):
+            self.assert_negado("select consumir_limite('assistente', 2, 600)")
 
 
 if __name__ == "__main__":

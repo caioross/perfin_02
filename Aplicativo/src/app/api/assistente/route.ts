@@ -4,12 +4,12 @@ import { montarContextoAssistente } from "@/dominio/assistente/montarContexto";
 import { lerFiltro } from "@/dominio/filtros";
 import { verificarAcesso } from "@/lib/auth/sessao";
 import { registrarErro } from "@/lib/erros";
-import { permitirRequisicao } from "@/lib/limiteRequisicoes";
 import { responderEmStreaming } from "@/servicos/assistente";
 import { obterResumoPainel } from "@/servicos/indicadores/resumo";
+import { consumirLimite } from "@/servicos/limites";
 
 const LIMITE_PERGUNTAS = 20;
-const JANELA_MS = 10 * 60 * 1000;
+const JANELA_SEGUNDOS = 10 * 60;
 
 const MAX_TEXTO_HISTORICO = 4000;
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   if (!origemValida(request)) return NextResponse.json({ erro: "Origem não permitida." }, { status: 403 });
   const usuario = await verificarAcesso(["usuario"]);
   if (!usuario) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
-  if (!permitirRequisicao(`assistente:${usuario.id}`, LIMITE_PERGUNTAS, JANELA_MS)) {
+  if (!(await consumirLimite("assistente", LIMITE_PERGUNTAS, JANELA_SEGUNDOS))) {
     return NextResponse.json({ erro: "Limite de perguntas atingido. Aguarde alguns minutos." }, { status: 429 });
   }
 

@@ -11,7 +11,7 @@ export default function PaginaInicial() {
       <header className="border-b border-borda bg-superficie">
         <nav aria-label="Principal" className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <span className="text-lg font-semibold text-marca">Perfin</span>
-          <BotaoPortal variante="secundario" />
+          <BotaoPortal variante="secundario" rotulo="Entrar / Cadastrar" />
         </nav>
       </header>
       <main>
@@ -22,9 +22,12 @@ export default function PaginaInicial() {
           </h1>
           <p className="max-w-2xl text-lg text-texto-suave">
             O Portal Perfin reúne inflação, juros e câmbio do Banco Central em painéis, insights, relatórios e um
-            assistente de IA para o nosso time.
+            assistente de IA. Crie sua conta com e-mail ou Google.
           </p>
-          <BotaoPortal />
+          <div className="flex flex-wrap gap-3">
+            <BotaoPortal destino="/cadastro" rotulo="Criar conta grátis" />
+            <BotaoPortal variante="secundario" rotulo="Já tenho conta" />
+          </div>
         </section>
         <SecaoPagina id="termometro" titulo="Termômetro econômico" descricao="Os últimos números oficiais, atualizados todo dia útil.">
           <Suspense fallback={<p className="text-texto-suave">Carregando indicadores…</p>}>

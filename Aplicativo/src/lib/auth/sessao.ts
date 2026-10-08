@@ -15,17 +15,18 @@ function papelComAcesso(papel: Papel | undefined): papel is PapelComAcesso {
 }
 
 // Lê e valida a sessão no servidor (getUser consulta o Supabase Auth; nunca confia só no cookie).
-// Regra fechada: sem perfil, papel sem acesso ou admin sem MFA = sem acesso.
+// Regra fechada: sem perfil, papel sem acesso, e-mail não confirmado ou admin sem MFA = sem acesso.
 export const obterEstadoSessao = cache(async (): Promise<EstadoSessao> => {
   const supabase = await criarClienteServidor();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return { estado: "anonimo" };
+  if (!data.user.email_confirmed_at) return { estado: "negado" };
 
   const { data: perfil } = await supabase
     .from("perfis")
-    .select("email, nome, papel")
+    .select("email, nome, papel, provedor")
     .eq("user_id", data.user.id)
-    .maybeSingle<{ email: string; nome: string | null; papel: Papel }>();
+    .maybeSingle<{ email: string; nome: string | null; papel: Papel; provedor: string }>();
   if (!perfil || !papelComAcesso(perfil.papel)) return { estado: "negado" };
 
   if (perfil.papel === "admin") {
@@ -34,7 +35,7 @@ export const obterEstadoSessao = cache(async (): Promise<EstadoSessao> => {
   }
   return {
     estado: "ok",
-    usuario: { id: data.user.id, email: perfil.email, nome: perfil.nome, papel: perfil.papel },
+    usuario: { id: data.user.id, email: perfil.email, nome: perfil.nome, papel: perfil.papel, provedor: perfil.provedor },
   };
 });
 
