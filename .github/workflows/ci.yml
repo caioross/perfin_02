@@ -85,7 +85,7 @@ jobs:
           cache: pip
           cache-dependency-path: Aplicativo/coletor/requirements.txt
       - run: pip install -r Aplicativo/coletor/requirements.txt
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       # Sobe o Postgres do Supabase (schemas auth, papéis anon/authenticated) e aplica
