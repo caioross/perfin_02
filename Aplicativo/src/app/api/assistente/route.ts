@@ -4,12 +4,9 @@ import { montarContextoAssistente } from "@/dominio/assistente/montarContexto";
 import { lerFiltro } from "@/dominio/filtros";
 import { verificarAcesso } from "@/lib/auth/sessao";
 import { registrarErro } from "@/lib/erros";
-import { permitirRequisicao } from "@/lib/limiteRequisicoes";
 import { responderEmStreaming } from "@/servicos/assistente";
 import { obterResumoPainel } from "@/servicos/indicadores/resumo";
-
-const LIMITE_PERGUNTAS = 20;
-const JANELA_MS = 10 * 60 * 1000;
+import { consumirLimite } from "@/servicos/limites";
 
 const MAX_TEXTO_HISTORICO = 4000;
 
@@ -39,12 +36,12 @@ export async function POST(request: NextRequest) {
   if (!origemValida(request)) return NextResponse.json({ erro: "Origem não permitida." }, { status: 403 });
   const usuario = await verificarAcesso(["usuario"]);
   if (!usuario) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
-  if (!permitirRequisicao(`assistente:${usuario.id}`, LIMITE_PERGUNTAS, JANELA_MS)) {
-    return NextResponse.json({ erro: "Limite de perguntas atingido. Aguarde alguns minutos." }, { status: 429 });
-  }
-
   const corpo = esquemaCorpo.safeParse(await request.json().catch(() => null));
   if (!corpo.success) return NextResponse.json({ erro: "Pergunta inválida." }, { status: 400 });
+  // Cota fixa no banco (20 perguntas a cada 10 minutos), contada só para perguntas válidas.
+  if (!(await consumirLimite("assistente"))) {
+    return NextResponse.json({ erro: "Limite de perguntas atingido. Aguarde alguns minutos." }, { status: 429 });
+  }
 
   try {
     const filtro = lerFiltro(corpo.data.filtro ?? {});

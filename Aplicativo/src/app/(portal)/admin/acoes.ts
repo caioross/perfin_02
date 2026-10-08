@@ -10,7 +10,7 @@ export type EstadoAdmin = { erro: string | null; sucesso: string | null };
 
 const NEGADO: EstadoAdmin = { erro: "Acesso negado.", sucesso: null };
 
-// Bloqueia/desbloqueia um usuário Google. O RLS recusa qualquer outro alvo.
+// Bloqueia/desbloqueia um usuário (Google ou e-mail). O RLS recusa admins e qualquer outro alvo.
 export async function alternarBloqueioAcao(formulario: FormData): Promise<void> {
   if (!(await verificarAcesso(["admin"]))) return;
   const entrada = z

@@ -21,6 +21,7 @@ Regras de negócio: `Documentacao/regras-de-negocio.md`. Decisões: `Documentaca
 - `Website/` — site institucional (Next.js, mesmo padrão; lê só a função pública `termometro_publico`).
 - `Aplicativo/supabase/` — `migrations/*.sql` (fonte da verdade do banco), `scripts/aplicar_migrations.py`, `scripts/criar_admin.py`, `scripts/definir_senha_coletor.py`, `testes/testar_banco.py` (cálculos × valores oficiais e RLS). Requer `DATABASE_URL` e `SUPABASE_POOLER_HOST` (conexão direta é só IPv6).
 - `Aplicativo/coletor/` — coletor Python do BCB/SGS; roda em `.github/workflows/coletar-indicadores.yml`.
+- CI: `.github/workflows/ci.yml` valida toda PR (jobs `portal`, `site`, `python`, `banco` com Supabase local via CLI, `segredos`). Testes do coletor: `python -m unittest discover -s Aplicativo/coletor -p "test_*.py"`.
 - No Windows PowerShell 5.1, não reescreva arquivos UTF-8 com `Get-Content`/`Set-Content` (corrompe acentos); use as ferramentas de edição ou Python.
 
 ## Arquitetura do Portal (`Aplicativo/src`)
@@ -28,7 +29,8 @@ Regras de negócio: `Documentacao/regras-de-negocio.md`. Decisões: `Documentaca
 - `app/` — rotas finas; páginas leem sessão/`searchParams` dentro de `<Suspense>`; Server Actions em `acoes.ts`.
 - `dominio/` — regras puras (filtros, insights, montagem de relatório/MIME/contexto do assistente).
 - `servicos/` — Supabase (sessão do usuário + RLS; `admin.ts` com secret key só para `google_tokens`), Google via `fetch`, Gemini.
-- `lib/` — sessão (`exigirAcesso`/`verificarAcesso`), env, cripto, formatação, erros.
+- `lib/` — sessão (`exigirAcesso`/`verificarAcesso`, `destinoAposLogin`), env, cripto, formatação, erros.
+- Autenticação: login/cadastro por e-mail e Google só no Portal (`/login`, `/cadastro`, `/esqueci-senha`, `/redefinir-senha`, `/auth/confirmar`, `/auth/callback`); regras de entrada em `dominio/auth/`.
 - `componentes/` — UI por props; `tipos/` — tipos compartilhados.
 - Cálculos financeiros ficam em funções SQL (`numeric`); a UI só formata.
 

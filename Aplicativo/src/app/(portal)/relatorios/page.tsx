@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Carregando from "@/componentes/estados/Carregando";
+import AvisoSoGoogle from "@/componentes/estados/AvisoSoGoogle";
 import EstadoErro from "@/componentes/estados/EstadoErro";
 import EstadoVazio from "@/componentes/estados/EstadoVazio";
 import CabecalhoPagina from "@/componentes/painel/CabecalhoPagina";
 import FormGerarRelatorio from "@/componentes/relatorios/FormGerarRelatorio";
 import ListaRelatorios from "@/componentes/relatorios/ListaRelatorios";
 import MensagemAcao from "@/componentes/relatorios/MensagemAcao";
+import { usaRecursosGoogle } from "@/dominio/auth/recursos";
 import { exigirAcesso } from "@/lib/auth/sessao";
 import { registrarErro } from "@/lib/erros";
 import { listarMesesDisponiveis, listarRelatorios } from "@/servicos/relatorios";
@@ -17,8 +19,11 @@ export const metadata: Metadata = { title: "Relatório do mês" };
 const AVISO_RECONEXAO = { erro: "Sua conexão com o Google expirou. Entre novamente com o Google.", reconectar: true, sucesso: null };
 
 async function ConteudoRelatorios({ searchParams }: { searchParams: PageProps<"/relatorios">["searchParams"] }) {
-  await exigirAcesso(["usuario"]);
+  const usuario = await exigirAcesso(["usuario"]);
   const pedirReconexao = (await searchParams).reconectar === "1";
+  if (!usaRecursosGoogle(usuario.provedor)) {
+    return <AvisoSoGoogle recurso="O relatório do mês (Planilha no Drive e rascunho no Gmail)" />;
+  }
   let meses: string[];
   let relatorios: Relatorio[];
   try {

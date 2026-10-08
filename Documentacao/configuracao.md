@@ -1,6 +1,6 @@
 # Configuração e publicação — Portal Perfin
 
-Siga na ordem. Os passos marcados com ✅ já foram feitos.
+Siga na ordem. Os passos marcados com ✅ já foram feitos. O passo a passo ilustrado do login com e-mail/senha e Google está em [`guias/instrucoes-login-email-google.pdf`](guias/instrucoes-login-email-google.pdf).
 
 ## 0. Segurança (antes de publicar)
 
@@ -36,9 +36,17 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
 - [ ] Supabase Dashboard:
   - **Authentication → Sign In / Providers → Email:**
     - habilitado;
-    - "Confirm email" ligado.
+    - "Confirm email" ligado;
+    - "Allow new users to sign up" ligado;
+    - senha mínima: 8.
 
-    Cadastros por e-mail nascem `sem_acesso`.
+    Cadastros por e-mail nascem `usuario` e só entram depois de confirmar o e-mail. Crie o admin **antes** de abrir o cadastro.
+  - **Authentication → Emails → SMTP Settings:** SMTP próprio (ex.: Resend ou Brevo). Obrigatório: o envio padrão só entrega para a equipe do projeto.
+  - **Authentication → Emails → Templates:**
+    - "Confirm signup" com o link `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=email`;
+    - "Reset password" com o link `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=recovery`.
+
+    O texto pronto está no PDF do guia.
   - **Authentication → Multi-Factor:** TOTP habilitado.
   - **Project Settings → API Keys:** copie a **Secret key** (`sb_secret_…`) para `SUPABASE_SECRET_KEY` na Vercel. Nunca a coloque no código.
 
@@ -53,7 +61,7 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
 
 | Variável | Valor |
 |---|---|
-| `NEXT_PUBLIC_SITE_URL` | URL do Portal na Vercel (ex.: `https://portal-perfin.vercel.app`) |
+| `NEXT_PUBLIC_SITE_URL` | URL do Portal na Vercel (`https://perfin-portal.vercel.app`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | do `.env` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | do `.env` |
 | `SUPABASE_SECRET_KEY` | Secret key do Supabase |
@@ -68,7 +76,7 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
 | Variável | Valor |
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | URL do site |
-| `NEXT_PUBLIC_PORTAL_URL` | URL do Portal |
+| `NEXT_PUBLIC_PORTAL_URL` | URL do Portal (`https://perfin-portal.vercel.app`). Sem ela, o botão "Entrar / Cadastrar" não aparece |
 | `NEXT_PUBLIC_SUPABASE_URL` | do `.env` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | do `.env` |
 
@@ -80,6 +88,15 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
 - [ ] Primeiro commit e push (confira antes com `git status` que nenhum `.env` aparece).
 - [ ] **Settings → Secrets and variables → Actions → New repository secret:** cadastre `COLETOR_DATABASE_URL` com a URL exibida pelo `definir_senha_coletor.py`.
 - [ ] **Actions → "Coletar indicadores (BCB/SGS)" → Run workflow**, para testar. Depois ele roda sozinho nos dias úteis às 19h.
+- ✅ **CI** (`.github/workflows/ci.yml`): roda em toda PR e na `main`. Jobs:
+  - `portal` e `site`: lint, typecheck, testes e build;
+  - `python`: compilação e testes do coletor;
+  - `banco`: migrations num Supabase local + `testar_banco.py`;
+  - `segredos`: gitleaks.
+- [ ] **Settings → Branches → regra para `main`:**
+  - exigir PR;
+  - exigir os checks `portal`, `site`, `python`, `banco` e `segredos`;
+  - bloquear force push.
 
 ## 4. Google Cloud Console (com a URL da Vercel em mãos)
 
@@ -94,7 +111,7 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
      - `openid`, `email` e `profile`
    - **Público → Usuários de teste:** os e-mails do time que podem entrar.
 3. **Credenciais → seu client OAuth (Aplicativo da Web):**
-   - **Origens JavaScript autorizadas:** `https://<portal>.vercel.app`
+   - **Origens JavaScript autorizadas:** `https://perfin-portal.vercel.app` e `https://perfin-site.vercel.app`
    - **URIs de redirecionamento autorizados:** `https://tphqjblaspvyflzjinkq.supabase.co/auth/v1/callback`
 
 > O modo Teste expira o acesso a cada 7 dias. O Portal mostra "Reconectar conta Google" quando isso acontece.
@@ -103,15 +120,20 @@ Siga na ordem. Os passos marcados com ✅ já foram feitos.
 
 1. **Authentication → Sign In / Providers → Google:** habilite e cole o Client ID e o **novo** Client Secret.
 2. **Authentication → URL Configuration:**
-   - **Site URL:** `https://<portal>.vercel.app`
-   - **Redirect URLs:** `https://<portal>.vercel.app/auth/callback`
+   - **Site URL:** `https://perfin-portal.vercel.app`
+   - **Redirect URLs:**
+     - `https://perfin-portal.vercel.app/**` (cobre `/auth/callback` do Google e `/auth/confirmar` dos e-mails);
+     - `https://*-caioross-projects.vercel.app/**` (previews).
 
 ## 6. Verificação final (na URL da Vercel)
 
 - [ ] Login do admin (e-mail e senha), depois cadastro do autenticador (QR code) e acesso a `/admin`.
+- [ ] Site: "Entrar / Cadastrar" abre o `/login` do Portal.
+- [ ] Cadastro por e-mail: o e-mail chega, o link confirma e abre a Visão geral. Na Agenda aparece "Disponível para quem entra com Google".
+- [ ] "Esqueci minha senha": o e-mail chega, você cria uma nova senha e entra.
 - [ ] Login Google de um usuário de teste: Visão geral com KPIs e insights.
 - [ ] Login Google de um e-mail fora da lista de teste: barrado pelo Google.
-- [ ] Bloquear um usuário no admin: ele passa a ver "acesso não autorizado".
+- [ ] Bloquear um usuário (Google ou e-mail) no admin: ele passa a ver "acesso não autorizado".
 - [ ] Filtros mudam cards, gráficos e insights; o link com o filtro abre igual em outra aba.
 - [ ] Relatório do mês: a planilha aparece no Drive, o .xlsx baixa e o rascunho aparece em **Rascunhos** do Gmail (não enviado).
 - [ ] Agenda lista as próximas reuniões.

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Perfin — Login com e-mail/senha e Google: instruções</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  :root { --marca:#0f5132; --suave:#5b6470; --borda:#d8dde3; --fundo:#f4f7f5; --alerta:#9a3412; }
+  * { box-sizing: border-box; }
+  body { font: 10.5pt/1.5 "Segoe UI", Arial, sans-serif; color:#1d232a; margin:0; }
+  h1 { font-size: 22pt; color: var(--marca); margin: 0 0 4px; }
+  h2 { font-size: 14pt; color: var(--marca); border-bottom: 2px solid var(--marca); padding-bottom: 3px; margin: 22px 0 10px; }
+  h3 { font-size: 11.5pt; margin: 16px 0 6px; }
+  p { margin: 4px 0 8px; }
+  code { font-family: Consolas, monospace; font-size: 9.5pt; background: var(--fundo); padding: 1px 4px; border-radius: 3px; word-break: break-all; }
+  pre { font-family: Consolas, monospace; font-size: 9pt; background: var(--fundo); border:1px solid var(--borda); padding: 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.5pt; }
+  th, td { border: 1px solid var(--borda); padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: var(--fundo); }
+  .sub { color: var(--suave); font-size: 11pt; }
+  .caixa { border: 1px solid var(--borda); border-left: 4px solid var(--marca); background: var(--fundo); padding: 8px 12px; border-radius: 4px; margin: 10px 0; }
+  .alerta { border-left-color: var(--alerta); }
+  .alerta strong { color: var(--alerta); }
+  .colunas { display: flex; gap: 12px; }
+  .colunas > div { flex: 1; border: 1px solid var(--borda); border-radius: 6px; padding: 8px 12px; }
+  ul.check { list-style: none; padding-left: 0; }
+  ul.check li { padding-left: 22px; position: relative; margin: 3px 0; }
+  ul.check li::before { content: "☐"; position: absolute; left: 0; font-size: 12pt; line-height: 1.2; }
+  .etapa { page-break-inside: avoid; }
+  .quebra { page-break-before: always; }
+  .tag { display:inline-block; font-size:8.5pt; font-weight:600; padding:1px 6px; border-radius:10px; background:#e6efe9; color:var(--marca); }
+  .tag.voce { background:#fdeee3; color:var(--alerta); }
+</style>
+</head>
+<body>
+
+<h1>Login com e-mail/senha e Google</h1>
+<p class="sub">Portal Perfin e site institucional · plano de execução e instruções · outubro de 2026</p>
+
+<div class="caixa">
+  <strong>Objetivo.</strong> No site, o botão <em>Entrar / Cadastrar</em> fica no canto superior direito. Ele abre a tela do Portal onde a pessoa entra ou cria conta com <strong>e-mail e senha</strong> ou com <strong>Google</strong>. Junto vêm os ajustes no banco (Supabase) e a automação de testes das PRs no GitHub (CI).
+</div>
+
+<h3>Decisões tomadas</h3>
+<table>
+  <tr><th>Tema</th><th>Decisão</th></tr>
+  <tr><td>Cadastro por e-mail</td><td><strong>Acesso imediato</strong> depois de confirmar o e-mail (papel <code>usuario</code>).</td></tr>
+  <tr><td>Onde fica o formulário</td><td>No <strong>Portal</strong>. Site e Portal estão em endereços diferentes na Vercel e não compartilham login, então há um único lugar de login.</td></tr>
+  <tr><td>Agenda, Relatório e Gmail para quem entrou por e-mail</td><td>Aviso “Disponível para quem entra com Google”. Por segurança, esses recursos ficam só com contas criadas pelo Google.</td></tr>
+</table>
+
+<h3>A URL que você procura (Google Cloud)</h3>
+<div class="caixa">
+  <strong>URI de redirecionamento autorizado:</strong><br>
+  <code>https://tphqjblaspvyflzjinkq.supabase.co/auth/v1/callback</code><br>
+  <span class="sub">É a mesma para o site e para o app: o Google sempre devolve para o Supabase, e o Supabase leva a pessoa ao Portal.</span>
+</div>
+
+<h3>Quem faz o quê</h3>
+<div class="colunas">
+  <div>
+    <span class="tag voce">VOCÊ</span>
+    <ul>
+      <li>Autenticar o GitHub CLI (<code>gh auth login</code>)</li>
+      <li>Vercel: criar o projeto do Portal e as variáveis</li>
+      <li>Rodar <code>criar_admin.py</code></li>
+      <li>Supabase: provedores, URLs, SMTP e templates de e-mail</li>
+      <li>Google Cloud: origens, redirect, escopos e usuários de teste</li>
+      <li>GitHub: proteção da branch <code>main</code></li>
+      <li>Teste final com contas reais</li>
+    </ul>
+  </div>
+  <div>
+    <span class="tag">CLAUDE</span>
+    <ul>
+      <li>Instalar o <code>gh</code></li>
+      <li>Issue + PR do CI (GitHub Actions)</li>
+      <li>Issue + PR do login/cadastro (banco, Portal e site)</li>
+      <li>Validar (CI, testes, revisão) e fazer o merge</li>
+      <li>Aplicar a migration no Supabase de produção</li>
+      <li>Atualizar a documentação</li>
+      <li>Conferir o deploy na Vercel</li>
+    </ul>
+  </div>
+</div>
+
+<h2 class="quebra">Parte A — Suas tarefas (na ordem)</h2>
+
+<div class="etapa">
+<h3>A1. GitHub CLI <span class="tag voce">bloqueia a criação da issue e da PR</span></h3>
+<ul class="check">
+  <li>Eu instalo o <code>gh</code>. Num terminal novo, rode <code>gh auth login</code> → GitHub.com → HTTPS → <em>Login with a web browser</em> e confirme o código no navegador.</li>
+  <li>Me avise quando terminar. Não cole tokens no chat.</li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A2. Vercel — Site (<code>perfin-site</code>)</h3>
+<ul class="check">
+  <li>Settings → General → <strong>Root Directory</strong> = <code>Website</code></li>
+  <li>Settings → Environment Variables → adicionar <code>NEXT_PUBLIC_PORTAL_URL</code> = <code>https://perfin-portal.vercel.app</code> (Production e Preview)</li>
+  <li>Deployments → último deploy → <strong>Redeploy</strong>, para o botão “Entrar / Cadastrar” aparecer</li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A3. Vercel — criar o projeto do Portal</h3>
+<ul class="check">
+  <li>Add New → Project → importar <code>caioross/perfin_02</code>, com o nome <strong><code>perfin-portal</code></strong> e Root Directory <code>Aplicativo</code> (Framework: Next.js)</li>
+  <li>Variáveis (Production e Preview):</li>
+</ul>
+<table>
+  <tr><th>Variável</th><th>Valor / origem</th></tr>
+  <tr><td><code>NEXT_PUBLIC_SITE_URL</code></td><td><code>https://perfin-portal.vercel.app</code></td></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>do <code>.env</code></td></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></td><td>do <code>.env</code></td></tr>
+  <tr><td><code>SUPABASE_SECRET_KEY</code></td><td>Supabase → Project Settings → API Keys → Secret key (<code>sb_secret_…</code>)</td></tr>
+  <tr><td><code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code></td><td>do <code>.env</code> (secret rotacionado)</td></tr>
+  <tr><td><code>GEMINI_API_KEY</code> / <code>GEMINI_MODEL</code></td><td>do <code>.env</code> / modelo Flash disponível na conta</td></tr>
+  <tr><td><code>TOKEN_ENCRYPTION_KEY</code></td><td>gere com <code>node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"</code></td></tr>
+</table>
+<p class="sub">Se o nome <code>perfin-portal</code> já estiver em uso, me diga qual URL a Vercel gerou: ela substitui <code>perfin-portal.vercel.app</code> em todos os passos.</p>
+<p><strong>Não</strong> vão para a Vercel: <code>DATABASE_URL</code>, <code>SUPABASE_DB_PASSWORD</code>, <code>ADMIN_EMAIL</code>, <code>ADMIN_PASSWORD</code> e <code>SUPABASE_POOLER_HOST</code>.</p>
+</div>
+
+<div class="etapa">
+<h3>A4. Criar o admin <span class="tag voce">antes de abrir o cadastro</span></h3>
+<ul class="check">
+  <li>Confirme que <code>ADMIN_PASSWORD</code> no <code>.env</code> tem 12 caracteres ou mais e que <code>SUPABASE_POOLER_HOST=aws-0-sa-east-1.pooler.supabase.com</code> está lá</li>
+  <li>Rode <code>python Aplicativo/supabase/scripts/criar_admin.py</code>. Assim ninguém registra o e-mail do admin antes de você. Se a conta já existir, o script só a promove se a senha conferir com <code>ADMIN_PASSWORD</code>.</li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A5. Supabase → Authentication</h3>
+<ul class="check">
+  <li><strong>Sign In / Providers → Email:</strong> Enable ✔, <em>Confirm email</em> ✔, <em>Allow new users to sign up</em> ✔ e <em>Minimum password length</em> = 8</li>
+  <li><strong>Sign In / Providers → Google:</strong> Enable ✔, com o Client ID e o Client Secret do <code>.env</code></li>
+  <li><strong>URL Configuration:</strong>
+    <table>
+      <tr><td>Site URL</td><td><code>https://perfin-portal.vercel.app</code></td></tr>
+      <tr><td>Redirect URLs</td><td><code>https://perfin-portal.vercel.app/**</code><br><code>https://*-caioross-projects.vercel.app/**</code></td></tr>
+    </table>
+  </li>
+  <li><strong>Multi-Factor:</strong> TOTP habilitado (usado pelo admin)</li>
+</ul>
+
+<div class="caixa alerta">
+  <strong>SMTP próprio é obrigatório.</strong> O envio padrão do Supabase só entrega para os e-mails da equipe do projeto e tem limite de poucos e-mails por hora. Sem SMTP próprio, quem se cadastra não recebe o link de confirmação.
+</div>
+<ul class="check">
+  <li>Crie uma conta num serviço de envio (ex.: <strong>Resend</strong> ou <strong>Brevo</strong>, ambos com plano grátis) e verifique o domínio ou o remetente</li>
+  <li>Supabase → Authentication → <strong>Emails → SMTP Settings</strong> → Enable Custom SMTP: host, porta 465/587, usuário, senha, remetente “Perfin” (a senha fica só no Supabase)</li>
+  <li>Authentication → <strong>Rate Limits</strong>: ajuste “emails per hour” (ex.: 30)</li>
+</ul>
+
+<h3>A5.1 Templates de e-mail (Authentication → Emails → Templates)</h3>
+<p><strong>Confirm signup</strong>. Assunto: <code>Confirme seu cadastro no Perfin</code></p>
+<pre>&lt;h2&gt;Bem-vindo ao Perfin&lt;/h2&gt;
+&lt;p&gt;Clique no botão abaixo para confirmar seu e-mail e acessar o Portal.&lt;/p&gt;
+&lt;p&gt;&lt;a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&amp;type=email"&gt;Confirmar e-mail&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Se você não pediu este cadastro, ignore esta mensagem.&lt;/p&gt;</pre>
+<p><strong>Reset password</strong>. Assunto: <code>Redefinir sua senha do Perfin</code></p>
+<pre>&lt;h2&gt;Redefinir senha&lt;/h2&gt;
+&lt;p&gt;Recebemos um pedido para redefinir a senha da sua conta no Perfin.&lt;/p&gt;
+&lt;p&gt;&lt;a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&amp;type=recovery"&gt;Criar nova senha&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Se não foi você, ignore esta mensagem; sua senha continua a mesma.&lt;/p&gt;</pre>
+</div>
+
+<div class="etapa">
+<h3>A6. Google Cloud Console</h3>
+<ul class="check">
+  <li><strong>APIs e serviços → Biblioteca:</strong> Calendar, Drive, Sheets e Gmail ativadas</li>
+  <li><strong>Google Auth Platform → Branding:</strong> domínios autorizados <code>supabase.co</code> e <code>vercel.app</code></li>
+  <li><strong>Acesso a dados:</strong> escopos <code>openid</code>, <code>email</code>, <code>profile</code>, <code>.../auth/calendar.events.readonly</code>, <code>.../auth/drive.file</code> e <code>.../auth/gmail.compose</code></li>
+  <li><strong>Público:</strong> status <em>Teste</em>, com os usuários de teste que podem entrar com Google</li>
+  <li><strong>Clientes → seu client OAuth (Aplicativo da Web):</strong>
+    <table>
+      <tr><td>Origens JavaScript autorizadas</td><td><code>https://perfin-portal.vercel.app</code><br><code>https://perfin-site.vercel.app</code></td></tr>
+      <tr><td>URIs de redirecionamento autorizados</td><td><code>https://tphqjblaspvyflzjinkq.supabase.co/auth/v1/callback</code></td></tr>
+    </table>
+  </li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A7. GitHub — proteger a <code>main</code> (depois que a PR do CI entrar)</h3>
+<ul class="check">
+  <li>Settings → Branches → Add rule (ou Rulesets) para <code>main</code>: <em>Require a pull request</em> e <em>Require status checks</em>: <code>portal</code>, <code>site</code>, <code>python</code>, <code>banco</code>, <code>segredos</code></li>
+  <li><em>Block force pushes</em> ✔</li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A8. Opcional (recomendado com cadastro aberto)</h3>
+<ul class="check">
+  <li>Supabase → Authentication → <strong>Attack Protection</strong> → CAPTCHA (Cloudflare Turnstile). Se ativar, me avise: o formulário precisa enviar o token do CAPTCHA.</li>
+</ul>
+</div>
+
+<div class="etapa">
+<h3>A9. Teste final (na URL pública)</h3>
+<ul class="check">
+  <li>Site: o botão “Entrar / Cadastrar” no canto superior direito abre o <code>/login</code> do Portal</li>
+  <li>Criar conta com e-mail → o e-mail chega → o link abre “Confirmar acesso” → <em>Continuar</em> → abre a Visão geral</li>
+  <li>Sair e entrar com e-mail e senha</li>
+  <li>“Esqueci minha senha” → o e-mail chega → criar nova senha → entrar</li>
+  <li>“Continuar com Google” (usuário de teste) → Visão geral; a Agenda lista eventos</li>
+  <li>Usuário de e-mail na Agenda → aviso “Disponível para quem entra com Google”</li>
+  <li>Admin: e-mail e senha → código do autenticador → <code>/admin</code>; bloquear o usuário de e-mail → ele vê “acesso não autorizado”</li>
+</ul>
+</div>
+
+<h2 class="quebra">Parte B — Tarefas do Claude</h2>
+<table>
+  <tr><th>#</th><th>Etapa</th><th>Pronto quando</th></tr>
+  <tr><td>B1</td><td>Instalar o <code>gh</code> (winget)</td><td><code>gh --version</code> ok; aguarda o seu <code>gh auth login</code></td></tr>
+  <tr><td>B2</td><td><strong>Issue “CI: validar PRs automaticamente”</strong>, branch <code>ci/validacao-prs</code>: workflow <code>ci.yml</code> (jobs portal, site, python, banco e segredos), Dependabot, modelo de PR, <code>config.toml</code> do Supabase e testes do coletor</td><td>PR com todos os checks verdes, revisada e com merge</td></tr>
+  <tr><td>B3</td><td><strong>Issue “Login e cadastro com e-mail/senha e Google”</strong>, branch <code>feature/login-email-google</code>: migration 0010, telas do Portal, botão do site, testes e documentação</td><td>PR aberta com <code>Closes #</code></td></tr>
+  <tr><td>B4</td><td>Validação: CI, subagents tester e reviewer, correções</td><td>CI verde e nenhum achado grave aberto</td></tr>
+  <tr><td>B5</td><td>Aplicar a migration 0010 no Supabase de produção e rodar <code>testar_banco.py</code></td><td>Todos os testes de banco passando</td></tr>
+  <tr><td>B6</td><td>Merge (squash) e conferência do deploy na Vercel</td><td>Deploy READY nos dois projetos</td></tr>
+  <tr><td>B7</td><td>Relatório final: o que foi feito e o que falta</td><td>Enviado no chat</td></tr>
+</table>
+
+<h3>O que muda no banco (migration 0010)</h3>
+<ul>
+  <li>Cadastro por e-mail passa a nascer como <code>usuario</code>. O acesso só começa depois da confirmação do e-mail.</li>
+  <li>O admin pode bloquear e desbloquear usuários de e-mail, além dos de Google, mas nunca outro admin.</li>
+  <li>Nova tabela <code>limites_uso</code> e função <code>consumir_limite</code>: o limite de perguntas ao assistente (20 a cada 10 minutos, fixo no banco) passa a valer no banco, protegendo o custo do Gemini com o cadastro aberto.</li>
+  <li>RLS continua ligado em todas as tabelas.</li>
+</ul>
+
+<h3>Telas novas no Portal</h3>
+<table>
+  <tr><th>Rota</th><th>Conteúdo</th></tr>
+  <tr><td><code>/login</code></td><td>Abas Entrar | Criar conta · “Continuar com Google” · e-mail e senha · “Esqueci minha senha”. O admin usa o mesmo formulário e segue para o MFA.</td></tr>
+  <tr><td><code>/cadastro</code></td><td>“Cadastrar com Google” · nome, e-mail, senha e confirmação → tela “Confirme seu e-mail” (com reenviar)</td></tr>
+  <tr><td><code>/esqueci-senha</code></td><td>Pede o e-mail; a resposta é sempre a mesma, para não revelar contas</td></tr>
+  <tr><td><code>/redefinir-senha</code></td><td>Nova senha + confirmação (aberta pelo link do e-mail)</td></tr>
+  <tr><td><code>/auth/confirmar</code></td><td>Página do link do e-mail com o botão “Continuar”. O token só é usado no clique, para que leitores de link do provedor de e-mail não o gastem antes da pessoa.</td></tr>
+</table>
+
+<h2>Apêndice</h2>
+<h3>Resumo de URLs</h3>
+<table>
+  <tr><th>Onde</th><th>Valor</th></tr>
+  <tr><td>Google → redirect</td><td><code>https://tphqjblaspvyflzjinkq.supabase.co/auth/v1/callback</code></td></tr>
+  <tr><td>Google → origens</td><td><code>https://perfin-portal.vercel.app</code>, <code>https://perfin-site.vercel.app</code></td></tr>
+  <tr><td>Supabase → Site URL</td><td><code>https://perfin-portal.vercel.app</code></td></tr>
+  <tr><td>Supabase → Redirect URLs</td><td><code>https://perfin-portal.vercel.app/**</code> e <code>https://*-caioross-projects.vercel.app/**</code></td></tr>
+  <tr><td>Vercel Site → <code>NEXT_PUBLIC_PORTAL_URL</code></td><td><code>https://perfin-portal.vercel.app</code></td></tr>
+</table>
+
+<h3>Solução de problemas</h3>
+<table>
+  <tr><th>Sintoma</th><th>Causa provável</th></tr>
+  <tr><td><code>redirect_uri_mismatch</code> no Google</td><td>A URI do Supabase não está igual (com <code>https</code> e sem barra no fim) em “URIs de redirecionamento”.</td></tr>
+  <tr><td>Depois do Google, volta para <code>localhost</code> ou para a página errada</td><td>Site URL e Redirect URLs do Supabase não configuradas (A5).</td></tr>
+  <tr><td>O e-mail de confirmação não chega</td><td>SMTP próprio não configurado, limite de e-mails por hora ou caixa de spam.</td></tr>
+  <tr><td>“Link inválido ou expirado”</td><td>O template não usa <code>/auth/confirmar?token_hash=…</code>, ou o link já foi usado. Peça outro.</td></tr>
+  <tr><td>“Acesso não autorizado”</td><td>Usuário bloqueado pelo admin, ou o admin tentou entrar com Google.</td></tr>
+  <tr><td>Google recusa a conta</td><td>A conta não está nos usuários de teste do Google Cloud.</td></tr>
+  <tr><td>O botão do site não aparece</td><td>Falta <code>NEXT_PUBLIC_PORTAL_URL</code> no projeto do site, ou falta o redeploy.</td></tr>
+</table>
+
+</body>
+</html>

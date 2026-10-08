@@ -8,6 +8,7 @@ export type UsuarioAtual = {
   email: string;
   nome: string | null;
   papel: PapelComAcesso;
+  provedor: string; // provedor do cadastro: "google" ou "email"
 };
 
 export type PerfilAdmin = {

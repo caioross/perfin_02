@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { usaRecursosGoogle } from "@/dominio/auth/recursos";
 import { verificarAcesso } from "@/lib/auth/sessao";
 import { ErroReconexaoGoogle, mensagemParaUsuario, registrarErro } from "@/lib/erros";
 import { criarRascunhoRelatorio, gerarRelatorio } from "@/servicos/relatorios";
@@ -9,6 +10,7 @@ import { criarRascunhoRelatorio, gerarRelatorio } from "@/servicos/relatorios";
 export type EstadoRelatorio = { erro: string | null; reconectar: boolean; sucesso: string | null };
 
 const SESSAO_EXPIRADA: EstadoRelatorio = { erro: "Sua sessão expirou. Entre novamente.", reconectar: false, sucesso: null };
+const SO_GOOGLE: EstadoRelatorio = { erro: "Disponível para quem entra com Google.", reconectar: false, sucesso: null };
 
 function falha(contexto: string, erro: unknown): EstadoRelatorio {
   registrarErro(contexto, erro);
@@ -18,6 +20,7 @@ function falha(contexto: string, erro: unknown): EstadoRelatorio {
 export async function gerarRelatorioAcao(_: EstadoRelatorio, formulario: FormData): Promise<EstadoRelatorio> {
   const usuario = await verificarAcesso(["usuario"]);
   if (!usuario) return SESSAO_EXPIRADA;
+  if (!usaRecursosGoogle(usuario.provedor)) return SO_GOOGLE;
   const mes = z.string().regex(/^\d{4}-\d{2}-01$/).safeParse(formulario.get("mes"));
   if (!mes.success) return { erro: "Escolha um mês de referência.", reconectar: false, sucesso: null };
   try {
@@ -33,6 +36,7 @@ export async function gerarRelatorioAcao(_: EstadoRelatorio, formulario: FormDat
 export async function criarRascunhoAcao(_: EstadoRelatorio, formulario: FormData): Promise<EstadoRelatorio> {
   const usuario = await verificarAcesso(["usuario"]);
   if (!usuario) return SESSAO_EXPIRADA;
+  if (!usaRecursosGoogle(usuario.provedor)) return SO_GOOGLE;
   const id = z.string().uuid().safeParse(formulario.get("id"));
   if (!id.success) return { erro: "Relatório inválido.", reconectar: false, sucesso: null };
   try {
