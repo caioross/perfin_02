@@ -5,11 +5,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # typescript-eslint (via eslint-config-next) ainda não suporta TypeScript 7:
+    # o lint quebra. Reavaliar quando houver suporte (typescript-eslint#10940).
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /Website
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # typescript-eslint (via eslint-config-next) ainda não suporta TypeScript 7:
+    # o lint quebra. Reavaliar quando houver suporte (typescript-eslint#10940).
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /Aplicativo/coletor
     schedule:

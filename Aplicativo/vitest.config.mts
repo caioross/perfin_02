@@ -12,7 +12,8 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
+    // Nenhum teste usa DOM; "node" evita subir o jsdom por arquivo (lento e sujeito a timeout no CI).
+    environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
   },
 });
